@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEUROSTRIKE - Test</title>
+  <style>
+    body { 
+      margin: 0; 
+      padding: 20px; 
+      background: #0a0a0a; 
+      color: white; 
+      font-family: Arial, sans-serif;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px;
+    }
+    button {
+      background: #ff006e;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    #results {
+      background: rgba(0,255,0,0.1);
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>NEUROSTRIKE - Component Testing</h1>
+  
+  <div class="test-section">
+    <h2>1. Test EmotionMapper</h2>
+    <button onclick="testEmotionMapper()">Test EmotionMapper</button>
+    <div id="emotion-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Test AudioEngine</h2>
+    <button onclick="testAudioEngine()">Test AudioEngine</button>
+    <button onclick="playShootSound()">Play Shoot</button>
+    <button onclick="playDeathSound()">Play Death</button>
+    <div id="audio-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Test HUD</h2>
+    <button onclick="showHUD()">Show HUD</button>
+    <button onclick="hideHUD()">Hide HUD</button>
+    <button onclick="updateHealth()">Update Health</button>
+    <div id="hud-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Test Screens</h2>
+    <button onclick="showMainMenu()">Main Menu</button>
+    <button onclick="showWaveComplete()">Wave Complete</button>
+    <button onclick="showGameOver()">Game Over</button>
+    <div id="screens-results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Test EmotionOverlay</h2>
+    <button onclick="showEmotionOverlay()">Show Emotion</button>
+    <button onclick="cycleEmotions()">Cycle Emotions</button>
+    <div id="emotion-overlay-results"></div>
+  </div>
+
+  <div id="results"></div>
+
+  <script type="module">
+    let emotionMapper, audioEngine, hud, screens, emotionOverlay;
+
+    // Import all modules
+    async function initModules() {
+      try {
+        // Test imports
+        const EmotionMapperModule = await import('./src/emotion/EmotionMapper.js');
+        const AudioEngineModule = await import('./src/audio/AudioEngine.js');
+        const HUDModule = await import('./src/ui/HUD.js');
+        const ScreensModule = await import('./src/ui/Screens.js');
+        const EmotionOverlayModule = await import('./src/ui/EmotionOverlay.js');
+
+        emotionMapper = new EmotionMapperModule.default();
+        audioEngine = new AudioEngineModule.default();
+        hud = new HUDModule.default(() => ({
+          health: 100, maxHealth: 100, ammo: 30, maxAmmo: 30,
+          levelIndex: 0, levelName: 'OUTPOST', kills: 0
+        }));
+        screens = new ScreensModule.default(
+          () => log('Game started'),
+          () => log('Game retried'),
+          () => log('Game continued')
+        );
+        emotionOverlay = new EmotionOverlayModule.default();
+
+        log('✅ All modules loaded successfully!');
+      } catch (error) {
+        log('❌ Error loading modules: ' + error.message);
+      }
+    }
+
+    function testEmotionMapper() {
+      if (!emotionMapper) {
+        log('❌ EmotionMapper not loaded');
+        return;
+      }
+
+      const emotions = ['Anger', 'Fear', 'Happiness', 'Sadness', 'Surprise', 'Neutral'];
+      const results = emotions.map(emotion => ({
+        emotion,
+        banner: emotionMapper.getBanner(emotion),
+        action: emotionMapper.getLevelAction(emotion),
+        music: emotionMapper.getMusic(emotion)
+      }));
+
+      document.getElementById('emotion-results').innerHTML = 
+        '<pre>' + JSON.stringify(results, null, 2) + '</pre>';
+      log('✅ EmotionMapper tested');
+    }
+
+    async function testAudioEngine() {
+      if (!audioEngine) {
+        log('❌ AudioEngine not loaded');
+        return;
+      }
+
+      try {
+        await audioEngine.init();
+        log('✅ AudioEngine initialized');
+        document.getElementById('audio-results').innerHTML = 
+          'AudioEngine ready - Try sound buttons';
+      } catch (error) {
+        log('❌ AudioEngine error: ' + error.message);
+      }
+    }
+
+    function playShootSound() {
+      if (audioEngine) audioEngine.playSound('shoot');
+    }
+
+    function playDeathSound() {
+      if (audioEngine) audioEngine.playSound('death');
+    }
+
+    function showHUD() {
+      if (hud) hud.setVisible(true);
+    }
+
+    function hideHUD() {
+      if (hud) hud.setVisible(false);
+    }
+
+    function updateHealth() {
+      if (hud) {
+        hud.updateHealth(50, 100);
+        hud.update();
+      }
+    }
+
+    function showMainMenu() {
+      if (screens) screens.showMenu();
+    }
+
+    function showWaveComplete() {
+      if (screens) screens.showWaveComplete('15 kills', 'Next: Level 2');
+    }
+
+    function showGameOver() {
+      if (screens) screens.showGameOver({
+        levelsReached: 5,
+        totalKills: 47,
+        timeSurvived: '12:34',
+        dominantEmotion: 'Anger'
+      });
+    }
+
+    function showEmotionOverlay() {
+      if (emotionOverlay) {
+        emotionOverlay.setVisible(true);
+        emotionOverlay.setEmotion('Happiness', 85);
+      }
+    }
+
+    let currentEmotionIndex = 0;
+    const emotions = ['Anger', 'Fear', 'Happiness', 'Sadness', 'Surprise', 'Neutral'];
+    
+    function cycleEmotions() {
+      if (!emotionOverlay) return;
+      
+      const emotion = emotions[currentEmotionIndex];
+      const confidence = Math.floor(Math.random() * 50) + 50;
+      
+      emotionOverlay.setEmotion(emotion, confidence);
+      log(`Emotion: ${emotion} (${confidence}% confidence)`);
+      
+      currentEmotionIndex = (currentEmotionIndex + 1) % emotions.length;
+    }
+
+    function log(message) {
+      const results = document.getElementById('results');
+      const timestamp = new Date().toLocaleTimeString();
+      results.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+      results.scrollTop = results.scrollHeight;
+    }
+
+    // Initialize on load
+    initModules();
+  </script>
+</body>
+</html>
